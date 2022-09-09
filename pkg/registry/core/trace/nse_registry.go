@@ -18,6 +18,7 @@ package trace
 
 import (
 	"context"
+	"errors"
 	"io"
 
 	"github.com/networkservicemesh/sdk/pkg/registry/core/streamcontext"
@@ -47,10 +48,10 @@ func (t *traceNetworkServiceEndpointRegistryFindClient) Recv() (*registry.Networ
 	rv, err := s.Recv()
 
 	if err != nil {
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil, err
 		}
-		if err == context.Canceled {
+		if errors.Is(err, context.Canceled) {
 			return nil, err
 		}
 		return nil, logError(ctx, err, operation)
