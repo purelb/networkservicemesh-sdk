@@ -19,6 +19,7 @@ package trace
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/networkservicemesh/sdk/pkg/registry/core/streamcontext"
@@ -26,6 +27,8 @@ import (
 
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"github.com/networkservicemesh/api/pkg/api/registry"
 )
@@ -51,12 +54,17 @@ func (t *traceNetworkServiceEndpointRegistryFindClient) Recv() (*registry.Networ
 		if errors.Is(err, io.EOF) {
 			return nil, err
 		}
-		if errors.Is(err, context.Canceled) {
+		if status.Code(err) == codes.Canceled {
+			fmt.Print("***** CANCELED")
 			return nil, err
 		}
-		logObjectTrace(ctx, "recv-error", err)
 		return nil, logError(ctx, err, operation)
 	}
+	// if err == nil {
+	// 	logObjectTrace(ctx, "recv-response", rv)
+	// } else {
+	// 	logObjectTrace(ctx, "recv-error", err)
+	// }
 	logObjectTrace(ctx, "recv-response", rv)
 	return rv, err
 }
