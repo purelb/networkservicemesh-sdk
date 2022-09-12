@@ -51,9 +51,11 @@ func (t *traceNetworkServiceEndpointRegistryFindClient) Recv() (*registry.Networ
 	rv, err := s.Recv()
 
 	if err != nil {
+		fmt.Println("***** Recv Error")
 		if errors.Is(err, io.EOF) {
 			return nil, err
 		}
+		fmt.Printf("***** Status Code: %d\n", status.Code(err))
 		if status.Code(err) == codes.Canceled {
 			fmt.Print("***** CANCELED")
 			return nil, err
