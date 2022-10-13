@@ -61,12 +61,12 @@ func (c *checkNSEContext) Unregister(ctx context.Context, ns *registry.NetworkSe
 func Test_DNSResolve(t *testing.T) {
 	const srv = "service1"
 
-	var resolver = new(sandbox.FakeDNSResolver)
+	var resolver = sandbox.NewFakeDNSResolver()
 
 	u, err := url.Parse("tcp://127.0.0.1:80")
 	require.NoError(t, err)
 
-	resolver.AddSRVEntry("domain1", srv, u)
+	require.NoError(t, sandbox.AddSRVEntry(resolver, "domain1", srv, u))
 
 	s := dnsresolve.NewNetworkServiceEndpointRegistryServer(
 		dnsresolve.WithRegistryService(srv),
@@ -120,15 +120,17 @@ func Test_DNSResolve_LookupNsmgrProxy(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	var resolver = new(sandbox.FakeDNSResolver)
+	var resolver = sandbox.NewFakeDNSResolver()
 
 	regURL, err := url.Parse("tcp://127.0.0.1:80")
 	require.NoError(t, err)
-	resolver.AddSRVEntry(domain, regSrv, regURL)
+
+	require.NoError(t, sandbox.AddSRVEntry(resolver, domain, regSrv, regURL))
 
 	nsmgrProxyURL, err := url.Parse("tcp://127.0.0.1:81")
 	require.NoError(t, err)
-	resolver.AddSRVEntry(domain, nsmgrProxySrv, nsmgrProxyURL)
+
+	require.NoError(t, sandbox.AddSRVEntry(resolver, domain, nsmgrProxySrv, nsmgrProxyURL))
 
 	s := dnsresolve.NewNetworkServiceEndpointRegistryServer(
 		dnsresolve.WithRegistryService(regSrv),

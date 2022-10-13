@@ -28,19 +28,26 @@ import (
 	"github.com/networkservicemesh/sdk/pkg/registry/common/dnsresolve"
 )
 
-// FakeDNSResolver implements dnsresolve.Resolver interface and can be used for logic DNS testing
+// FakeDNSResolver implements the dnsresolve.Resolver interface and
+// can be used for logic DNS testing.
 type FakeDNSResolver struct {
 	sync.Mutex
-	ports map[string]string
+	addresses map[string]string
+	ports     map[string]string
+}
+
+func NewFakeDNSResolver() dnsresolve.Resolver {
+	return FakeDNSResolver{
+		ports:     map[string]string{},
+		addresses: map[string]string{},
+	}
 }
 
 // LookupSRV lookups DNS SRV record
-func (f *FakeDNSResolver) LookupSRV(ctx context.Context, service, proto, name string) (string, []*net.SRV, error) {
+func (f FakeDNSResolver) LookupSRV(ctx context.Context, service, proto, name string) (string, []*net.SRV, error) {
 	f.Lock()
 	defer f.Unlock()
-	if f.ports == nil {
-		f.ports = map[string]string{}
-	}
+
 	if v, ok := f.ports[name]; ok {
 		i, err := strconv.Atoi(v)
 		if err != nil {
@@ -55,35 +62,31 @@ func (f *FakeDNSResolver) LookupSRV(ctx context.Context, service, proto, name st
 }
 
 // LookupIPAddr lookups IP address by host
-func (f *FakeDNSResolver) LookupIPAddr(_ context.Context, host string) ([]net.IPAddr, error) {
+func (f FakeDNSResolver) LookupIPAddr(_ context.Context, host string) ([]net.IPAddr, error) {
 	f.Lock()
 	defer f.Unlock()
-	if f.ports == nil {
-		f.ports = map[string]string{}
-	}
-	if _, ok := f.ports[host]; ok {
+
+	if address, ok := f.addresses[host]; ok {
 		return []net.IPAddr{{
-			IP: net.ParseIP("127.0.0.1"),
+			IP: net.ParseIP(address),
 		}}, nil
 	}
 	return nil, errors.New("not found")
 }
 
-// AddSRVEntry adds new DNS record by passed url.URL
-func (f *FakeDNSResolver) AddSRVEntry(name, service string, u *url.URL) {
-	if u == nil {
-		panic("u cannot be nil")
-	}
+// AddSRVEntry adds a DNS record to r using name and service as the
+// key, and the host and port in u as the values. r must be a Resolver
+// that was created by NewFakeDNSResolver().
+func AddSRVEntry(r dnsresolve.Resolver, name, service string, u *url.URL) (err error) {
+	f := r.(FakeDNSResolver)
 	f.Lock()
 	defer f.Unlock()
-	if f.ports == nil {
-		f.ports = map[string]string{}
-	}
+
 	key := fmt.Sprintf("%v.%v", service, name)
-	var err error
-	if _, f.ports[key], err = net.SplitHostPort(u.Host); err != nil {
-		panic(err.Error())
-	}
+	f.addresses[key], f.ports[key], err = net.SplitHostPort(u.Host)
+
+	return
 }
 
+// Ensure that FakeDNSResolver is a valid Resolver.
 var _ dnsresolve.Resolver = (*FakeDNSResolver)(nil)
